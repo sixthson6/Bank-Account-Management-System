@@ -1,5 +1,9 @@
 # Bank-Account-Management-System
 
-## `model/`:
+## `src`:
+### `Main.java`:
 
-### `BankAccount`: Base class for all bank account types (Savings, Current, Fixed Deposit).
+### `Transactions`:
+
+### `model/`:
+#### `BankAccount`: Base class for all bank account types (Savings, Current, Fixed Deposit).
