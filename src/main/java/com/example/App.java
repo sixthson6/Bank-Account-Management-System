@@ -1,6 +1,7 @@
 package com.example;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 import javafx.application.Application;
 import javafx.geometry.Insets;
@@ -61,12 +62,13 @@ public class App extends Application {
         Button checkBalanceBtn = new Button("Check Balance");
         Button viewTransactionsBtn = new Button("View Transactions");
         Button accountDetailsBtn = new Button("Account Details");
+        Button maturityDateBtn = new Button("Show Maturity Date");
 
         TextArea outputArea = new TextArea();
         outputArea.setEditable(true);
 
         VBox actionsBox = new VBox(10, 
-        new Label("Enter Amount"), amountField, new Label("Transactions:"), depositBtn, withdrawBtn, checkBalanceBtn, viewTransactionsBtn, transactionsListField, accountDetailsBtn);
+        new Label("Enter Amount"), amountField, new Label("Transactions:"), depositBtn, withdrawBtn, maturityDateBtn, checkBalanceBtn, viewTransactionsBtn, transactionsListField, accountDetailsBtn);
         actionsBox.setPadding(new Insets(10));
 
         HBox mainBox = new HBox(20, creationBox, actionsBox, outputArea);
@@ -183,32 +185,41 @@ public class App extends Application {
                         return;
                     }
                 }
+            
                 if (account instanceof FixedDepositAccount) {
                     FixedDepositAccount fda = (FixedDepositAccount) account;
-                    if (amt <= 0.0) {
-                        outputArea.setText("Error: Invalid withdrawal amount.");
+        
+                    try {
+                        fda.withdraw(amt); // Use the refactored withdraw method
+                        transactions.addTransaction(fda.accountNumber, fda.accountName, "Withdraw", amt);
+                        outputArea.setText("Withdrawn: GHS " + amt + "\nNew Balance: GHS " + fda.balance);
+                    } catch (IllegalArgumentException ex) {
+                        outputArea.setText("Error: " + ex.getMessage());
+                    }
+                } else if (account instanceof SavingsAccount) {
+                    SavingsAccount sa = (SavingsAccount) account;
+                    if ((sa.balance - amt) < sa.MIN_BALANCE) {
+                        outputArea.setText("Error: Cannot withdraw. Minimum balance requirement not met.");
                         return;
-                    } else
-                    if (LocalDateTime.now().isBefore(fda.getMaturityDate())) {
-                        outputArea.setText("Error: Cannot withdraw before maturity date.");
+                    }
+                    sa.withdraw(amt);
+                    transactions.addTransaction(sa.accountNumber, sa.accountName, "Withdraw", amt);
+                    outputArea.setText("Withdrawn: GHS " + amt + "\nNew Balance: GHS " + sa.balance);
+                } else if (account instanceof CurrentAccount) {
+                    CurrentAccount ca = (CurrentAccount) account;
+                    if (amt > ca.balance + ca.OVERDRAFT_LIMIT) {
+                        outputArea.setText("Error: Cannot withdraw. Overdraft limit exceeded.");
                         return;
-                    } else if (amt <= 0.0) {
-                        outputArea.setText("Error: Invalid withdrawal amount.");
-                        return;
-                    } else if (amt > fda.balance) {
-                        outputArea.setText("Error: Insufficient funds.");
-                        return;
-                    } else {
-                        double interestRate = fda.maturityMonths == 3 ? 0.16 : 0.23;
-                        fda.balance += fda.balance * interestRate; // Apply interest
-                        fda.balance -= amt; // Deduct withdrawal amount
-                        outputArea.setText("Withdrawn: GHS " + amt + "\nInterest Applied: " + (interestRate * 100) + "%");
-                        }
+                    }
+                    ca.withdraw(amt);
+                    transactions.addTransaction(ca.accountNumber, ca.accountName, "Withdraw", amt);
+                    outputArea.setText("Withdrawn: GHS " + amt + "\nNew Balance: GHS " + ca.balance);
                 }
-                account.withdraw(amt);
-                transactions.addTransaction(account.accountNumber, account.accountName, "Withdraw", amt);
-                outputArea.setText("Withdrawn: " + amt);
+        
                 amountField.clear();
+            } catch (NumberFormatException ex) {
+                outputArea.setText("Invalid amount. Please enter a valid number.");
+
             } catch (Exception ex) {
                 outputArea.setText("Error withdrawing amount.");
             }
@@ -217,6 +228,26 @@ public class App extends Application {
         checkBalanceBtn.setOnAction(e -> {
             outputArea.setText("Balance: GHS " + account.balance);
             amountField.clear();
+        });
+
+        maturityDateBtn.setOnAction(e -> {
+            if (account == null) {
+                outputArea.setText("No account created yet.");
+                return;
+            }
+        
+            if (account instanceof FixedDepositAccount) {
+                FixedDepositAccount fda = (FixedDepositAccount) account;
+                LocalDateTime maturityDate = fda.getMaturityDate();
+                outputArea.setText("Maturity Date: " + maturityDate.toString());
+                        // Format the date
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
+            String formattedDate = maturityDate.format(formatter);
+
+            outputArea.setText("Maturity Date: " + formattedDate);
+            } else {
+                outputArea.setText("Maturity date is only applicable for Fixed Deposit Accounts.");
+            }
         });
 
         viewTransactionsBtn.setOnAction(e -> {
