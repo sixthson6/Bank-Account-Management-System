@@ -36,15 +36,24 @@ class Transactions {
    }
 
 
-    boolean isAccountNumberExists(String num) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
     void viewTransactionsListString(TextArea outputArea) {
         StringBuilder sb = new StringBuilder();
         for (Transaction t : transactions) sb.append(t).append("\n");
         outputArea.setText(sb.toString());
 
     }
+
+    public String viewTransactionsListString(int N) {
+        StringBuilder sb = new StringBuilder();
+        int size = transactions.size();
+        int start = Math.max(0, size - N);
+    
+        for (int i = start; i < size; i++) {
+            sb.append(transactions.get(i)).append("\n");
+        }
+    
+        return sb.toString();
+    }
+    
 }
 

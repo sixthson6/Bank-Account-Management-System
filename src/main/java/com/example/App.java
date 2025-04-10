@@ -1,5 +1,7 @@
 package com.example;
 
+import java.time.LocalDateTime;
+
 import javafx.application.Application;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
@@ -11,12 +13,12 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
-// import javafx.fxml.FXML;
-// import javafx.scene.layout.AnchorPane;
+
 
 public class App extends Application {
 
     private Account account;
+    // private SavingsAccount savingsAccount;
     private final Transactions transactions = new Transactions();
 
     // @FXML
@@ -27,6 +29,7 @@ public class App extends Application {
         primaryStage.setTitle("Bank Account Management System");
 
         // Input fields
+        TextField transactionsListField = new TextField();
         TextField amountField = new TextField();
         TextField accNumberField = new TextField();
         TextField accNameField = new TextField();
@@ -37,29 +40,33 @@ public class App extends Application {
         maturityField.setPromptText("Only for Fixed (3 or 6 months)");
 
         Button createBtn = new Button("Create Account");
+        Button resetBtn = new Button("Reset");
 
         VBox creationBox = new VBox(10,
             new Label("Account Number:"), accNumberField,
             new Label("Account Name:"), accNameField,
             new Label("Account Type:"), accTypeBox,
-            new Label("Amount Field"), amountField,
             maturityField,
-            createBtn
+            createBtn,
+            resetBtn
         );
         creationBox.setPadding(new Insets(10));
 
         // Action buttons
     
         amountField.setPromptText("Amount");
+        transactionsListField.setPromptText("View last N transactions (N)");
         Button depositBtn = new Button("Deposit");
         Button withdrawBtn = new Button("Withdraw");
         Button checkBalanceBtn = new Button("Check Balance");
         Button viewTransactionsBtn = new Button("View Transactions");
+        Button accountDetailsBtn = new Button("Account Details");
 
         TextArea outputArea = new TextArea();
         outputArea.setEditable(true);
 
-        VBox actionsBox = new VBox(10, amountField, depositBtn, withdrawBtn, checkBalanceBtn, viewTransactionsBtn);
+        VBox actionsBox = new VBox(10, 
+        new Label("Enter Amount"), amountField, new Label("Transactions:"), depositBtn, withdrawBtn, checkBalanceBtn, viewTransactionsBtn, transactionsListField, accountDetailsBtn);
         actionsBox.setPadding(new Insets(10));
 
         HBox mainBox = new HBox(20, creationBox, actionsBox, outputArea);
@@ -140,10 +147,20 @@ public class App extends Application {
         depositBtn.setOnAction(e -> {
             try {
                 double amt = Double.parseDouble(amountField.getText());
+                if (account instanceof FixedDepositAccount) {
+                    if (amt % 100.0 != 0.0) {
+                        outputArea.setText("Error: Deposit must be in multiples of 100.");
+                        return;
+                    }
+                }
+                //reference the account object to the transactions object
+
                 account.deposit(amt);
                 transactions.addTransaction(account.accountNumber, account.accountName, "Deposit", amt);
-                outputArea.setText("Deposited: " + amt);
+                outputArea.setText("Deposited: GHS " + amt);
                 amountField.clear();
+            } catch (NumberFormatException ex) {
+                outputArea.setText("Invalid amount. Please enter a valid number.");
             } catch (Exception ex) {
                 outputArea.setText("Error depositing amount.");
             }
@@ -152,6 +169,42 @@ public class App extends Application {
         withdrawBtn.setOnAction(e -> {
             try {
                 double amt = Double.parseDouble(amountField.getText());
+                if (account instanceof SavingsAccount) {
+                    SavingsAccount sa = (SavingsAccount) account;
+                    if ((sa.balance - amt) < sa.MIN_BALANCE) {
+                        outputArea.setText("Error: Cannot withdraw. Minimum balance requirement not met.");
+                        return;
+                    }
+                }
+                if (account instanceof CurrentAccount) {
+                    CurrentAccount ca = (CurrentAccount) account;
+                    if (( amt) > ca.balance + ca.OVERDRAFT_LIMIT) {
+                        outputArea.setText("Error: Cannot withdraw. Overdraft limit exceeded.");
+                        return;
+                    }
+                }
+                if (account instanceof FixedDepositAccount) {
+                    FixedDepositAccount fda = (FixedDepositAccount) account;
+                    if (amt <= 0.0) {
+                        outputArea.setText("Error: Invalid withdrawal amount.");
+                        return;
+                    } else
+                    if (LocalDateTime.now().isBefore(fda.getMaturityDate())) {
+                        outputArea.setText("Error: Cannot withdraw before maturity date.");
+                        return;
+                    } else if (amt <= 0.0) {
+                        outputArea.setText("Error: Invalid withdrawal amount.");
+                        return;
+                    } else if (amt > fda.balance) {
+                        outputArea.setText("Error: Insufficient funds.");
+                        return;
+                    } else {
+                        double interestRate = fda.maturityMonths == 3 ? 0.16 : 0.23;
+                        fda.balance += fda.balance * interestRate; // Apply interest
+                        fda.balance -= amt; // Deduct withdrawal amount
+                        outputArea.setText("Withdrawn: GHS " + amt + "\nInterest Applied: " + (interestRate * 100) + "%");
+                        }
+                }
                 account.withdraw(amt);
                 transactions.addTransaction(account.accountNumber, account.accountName, "Withdraw", amt);
                 outputArea.setText("Withdrawn: " + amt);
@@ -162,7 +215,7 @@ public class App extends Application {
         });
 
         checkBalanceBtn.setOnAction(e -> {
-            outputArea.setText("Balance: " + account.balance);
+            outputArea.setText("Balance: GHS " + account.balance);
             amountField.clear();
         });
 
@@ -172,14 +225,59 @@ public class App extends Application {
                 outputArea.setText("No account created yet.");
                 return;
             }
-            
-            transactions.viewTransactionsListString(outputArea);
-            outputArea.setText("Transactions:\n" + transactions.viewTransactionsList());
+        
+            try {
+                String input = transactionsListField.getText().trim();
+                if (input.isEmpty()) {
+                    // If no input is provided, display the full list of transactions
+                    outputArea.setText(transactions.viewTransactionsListString());
+                } else {
+                    // If input is provided, parse it as N and display the last N transactions
+                    int n = Integer.parseInt(input);
+                    if (n <= 0) {
+                        outputArea.setText("Please enter a positive number for N.");
+                        return;
+                    }
+                    outputArea.setText(transactions.viewTransactionsListString(n));
+                }
+            } catch (NumberFormatException ex) {
+                outputArea.setText("Invalid input. Please enter a valid number for N.");
+            }
+        
+            transactionsListField.clear();
             amountField.clear();
-            // outputArea.setText(transactions.viewTransactionsList());
         });
 
-        Scene scene = new Scene(mainBox, 800, 600);
+        accountDetailsBtn.setOnAction(e -> {
+            if (account == null) {
+                outputArea.setText("No account created yet.");
+                return;
+            }
+            String details = "--------------------------------\n" +
+                             "Account Details:\n" +
+                             "--------------------------------\n" +
+                             "Account Number: " + account.accountNumber + "\n" +
+                             "Account Name: " + account.accountName + "\n" +
+                             "Account Type: " + account.accountType + "\n" +
+                             "Balance: GHS " + account.balance + "\n" +
+                             "--------------------------------\n" ;
+            outputArea.setText(details);
+            amountField.clear();
+        });
+
+        resetBtn.setOnAction(e -> {
+            // Clear all input fields
+            transactionsListField.clear();
+            amountField.clear();
+            accNumberField.clear();
+            accNameField.clear();
+            maturityField.clear();
+            accTypeBox.setValue(null); // Reset ComboBox
+            outputArea.clear(); // Clear the output area
+        });
+
+        // Set up the scene and stage
+        Scene scene = new Scene(mainBox, 800, 350);
         primaryStage.setScene(scene);
         primaryStage.show();
 
