@@ -20,6 +20,7 @@ class Transaction {
       this.timestamp = LocalDateTime.now();
    }
 
+   @Override
    public String toString() {
       return String.format("[%s] (%s) | %s | %s | %.2f GHS", this.timestamp, this.accountName, this.accountNumber, this.type, this.amount);
    }

@@ -29,20 +29,21 @@ class Transactions {
         return null;
    }
 
-   public String viewTransactionsListString() {
-    StringBuilder sb = new StringBuilder();
-    for (Transaction t : transactions) sb.append(t).append("\n");
-    return sb.toString();
-   }
-
-
-    void viewTransactionsListString(TextArea outputArea) {
-        StringBuilder sb = new StringBuilder();
-        for (Transaction t : transactions) sb.append(t).append("\n");
-        outputArea.setText(sb.toString());
-
+   
+   
+   void viewTransactionsListString(TextArea outputArea) {
+       StringBuilder sb = new StringBuilder();
+       for (Transaction t : transactions) sb.append(t).append("\n");
+       outputArea.setText(sb.toString());
+       
     }
-
+    
+    public String viewTransactionsListString() {
+     StringBuilder sb = new StringBuilder();
+     for (Transaction t : transactions) sb.append(t).append("\n");
+     return sb.toString();
+    }
+    
     public String viewTransactionsListString(int N) {
         StringBuilder sb = new StringBuilder();
         int size = transactions.size();
