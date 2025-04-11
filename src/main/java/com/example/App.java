@@ -69,6 +69,7 @@ public class App extends Application {
             account.deposit(amt);
             transactions.addTransaction(account.accountNumber, account.accountName, "Deposit", amt);
             UIComponents.outputArea.setText("Deposited: " + amt);
+            UIComponents.amountField.clear();
         } catch (Exception ex) {
             UIComponents.outputArea.setText("Error depositing amount.");
         }
@@ -87,6 +88,7 @@ public class App extends Application {
             account.withdraw(amt);
             transactions.addTransaction(account.accountNumber, account.accountName, "Withdraw", amt);
             UIComponents.outputArea.setText("Withdrawn: " + amt);
+            UIComponents.amountField.clear();
         } catch (Exception ex) {
             UIComponents.outputArea.setText("Error withdrawing amount.");
         }
@@ -103,6 +105,7 @@ public class App extends Application {
 
 class UIComponents {
     static TextArea outputArea = new TextArea();
+    static TextField amountField = new TextField();
 
     static VBox createAccountCreationPane(AccountCreationHandler handler) {
         TextField accNumberField = new TextField();
@@ -130,7 +133,7 @@ class UIComponents {
 
     static VBox createActionsPane(DepositHandler depositHandler, WithdrawHandler withdrawHandler,
                                   Runnable checkBalanceHandler, Runnable viewTransactionsHandler) {
-        TextField amountField = new TextField();
+        
         amountField.setPromptText("Amount");
 
         Button depositBtn = new Button("Deposit");
